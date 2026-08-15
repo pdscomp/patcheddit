@@ -35,6 +35,7 @@ public abstract class BaseFixRedgifsApiPatch extends PatchedditInterceptor {
         }
 
         String userAgent = getDefaultUserAgent();
+        boolean forceTokenRefresh = false;
 
         if (request.header("Authorization") != null) {
             Response response = chain.proceed(request.newBuilder().header("User-Agent", userAgent).build());
@@ -43,12 +44,21 @@ public abstract class BaseFixRedgifsApiPatch extends PatchedditInterceptor {
             }
             // It's possible that the user agent is being overwritten later down in the interceptor
             // chain, so make sure we grab the new user agent from the request headers.
-            userAgent = response.request().header("User-Agent");
+            String responseUserAgent = response.request().header("User-Agent");
+            if (responseUserAgent != null && !responseUserAgent.isEmpty()) {
+                userAgent = responseUserAgent;
+            }
             response.close();
+
+            // Redgifs tokens are tied to the IP address that requested them. A cached token can
+            // therefore become invalid before its normal expiry when the device changes networks.
+            // Do not retry the failed request with the same cached token.
+            forceTokenRefresh = true;
         }
 
         try {
-            RedgifsTokenManager.RedgifsToken token = RedgifsTokenManager.refreshToken(userAgent);
+            RedgifsTokenManager.RedgifsToken token =
+                    RedgifsTokenManager.refreshToken(userAgent, forceTokenRefresh);
 
             // Emulate response for old OAuth endpoint
             if (request.url().encodedPath().equals("/v2/oauth/client")) {
