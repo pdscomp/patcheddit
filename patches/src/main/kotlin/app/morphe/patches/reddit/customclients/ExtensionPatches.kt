@@ -7,7 +7,7 @@ import app.morphe.patches.all.misc.extension.sharedExtensionPatch
 object ExtensionPatches {
     private fun hook(extensionName: String, vararg hookedClasses: String): BytecodePatch =
         sharedExtensionPatch(
-            extensionName, *hookedClasses.map { activityOnCreateExtensionHook(it) }.toTypedArray()
+            extensionName, hookedClasses.map { activityOnCreateExtensionHook(it) }
         )
     internal val BaconReader = hook("baconreader", "Lcom/onelouder/baconreader/BaconReader;")
 
